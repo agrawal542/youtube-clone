@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-import jwt  from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
@@ -7,7 +7,7 @@ const userSchema = new Schema(
     watchHistory: [
       {
         type: Schema.Types.ObjectId,
-        ref: "User",
+        ref: "Video",
       },
     ],
 
@@ -17,7 +17,7 @@ const userSchema = new Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      index: true,
+      index: true, //searching fill enable(optimize)
     },
 
     email: {
@@ -46,7 +46,7 @@ const userSchema = new Schema(
 
     password: {
       type: String,
-      required: ["Password is required"],
+      required: [true, "Password is required"],
     },
 
     refreshToken: {
@@ -56,17 +56,21 @@ const userSchema = new Schema(
   { timestamps: true }
 );
 
+//encrypt the password
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-
-  this.password = await bcrypt.hash(this.password, 10);
-  next();
+  else {
+    this.password = await bcrypt.hash(this.password, 10);
+    next();
+  }
 });
 
+//check the password is match or not
 userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
+//access token using jwt
 userSchema.methods.generateAccessToken = function () {
   return jwt.sign(
     {
@@ -75,21 +79,22 @@ userSchema.methods.generateAccessToken = function () {
       username: this.username,
       fullName: this.fullName,
     },
-    process.env.ACCESS_TOKEN_SECRET,
+     process.env.ACCESS_TOKEN_SECRET,
     {
-      expiryIn: processe.env.ACCESS_TOKEN_EXPIRY,
+      expiryIn: process.env.ACCESS_TOKEN_EXPIRY,
     }
   );
 };
 
+//refresh token using jwt
 userSchema.methods.generateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
     },
-    process.env.REFRESH_TOKEN_SELECT,
+     process.env.REFRESH_TOKEN_SELECT,
     {
-      expiryIn: processe.env.REFRESH_TOKEN_EXPIRY,
+      expiryIn: process.env.REFRESH_TOKEN_EXPIRY,
     }
   );
 };
